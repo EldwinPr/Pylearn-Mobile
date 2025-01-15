@@ -1,30 +1,38 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
-import { Link, router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import { config } from 'src/config/api';
 
-interface LoginForm {
+interface RegisterForm {
   email: string;
+  username: string;
   password: string;
+  confirmPassword: string;
 }
 
-interface AuthResponse {
+interface RegisterResponse {
   status: string;
   message: string;
-  token?: string;
 }
 
-export default function LoginScreen() {
-  const [form, setForm] = useState<LoginForm>({
+export default function RegisterScreen() {
+  const [form, setForm] = useState<RegisterForm>({
     email: '',
+    username: '',
     password: '',
+    confirmPassword: '',
   });
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
+    // Form validation
+    if (form.username.length < 3) {
+      setError('Username must be at least 3 characters long.');
+      return;
+    }
+
     if (!form.email.includes('@') || form.email.length < 5) {
       setError('Please enter a valid email address.');
       return;
@@ -35,26 +43,34 @@ export default function LoginScreen() {
       return;
     }
 
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch(`${config.API_URL}/login`, {
+      const response = await fetch(`${config.API_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          email: form.email,
+          username: form.username,
+          password: form.password,
+        }),
       });
 
-      const data: AuthResponse = await response.json();
+      const data: RegisterResponse = await response.json();
 
-      if (response.ok && data.token) {
-        await AsyncStorage.setItem('userEmail', form.email);
-        await AsyncStorage.setItem('token', data.token);
-        router.replace('/(tabs)');
+      if (response.ok) {
+        // Redirect to login page on successful registration
+        router.replace('/auth/login');
       } else {
-        setError(data.message || 'Login failed. Please try again.');
+        setError(data.message || 'Registration failed. Please try again.');
       }
     } catch (error) {
       setError('Error: Unable to connect to server.');
@@ -77,6 +93,15 @@ export default function LoginScreen() {
         </View>
 
         <TextInput
+          label="Username"
+          value={form.username}
+          onChangeText={(text) => setForm({ ...form, username: text })}
+          mode="outlined"
+          style={styles.input}
+          autoCapitalize="none"
+        />
+
+        <TextInput
           label="Email"
           value={form.email}
           onChangeText={(text) => setForm({ ...form, email: text })}
@@ -95,29 +120,42 @@ export default function LoginScreen() {
           secureTextEntry
         />
 
+        <TextInput
+          label="Confirm Password"
+          value={form.confirmPassword}
+          onChangeText={(text) => setForm({ ...form, confirmPassword: text })}
+          mode="outlined"
+          style={styles.input}
+          secureTextEntry
+        />
+
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Button
           mode="contained"
-          onPress={handleLogin}
+          onPress={handleRegister}
           style={styles.button}
           loading={loading}
           disabled={loading}
         >
-          Login
+          Register
         </Button>
 
         <Button
           mode="outlined"
-          onPress={() => router.push('/auth/register')}
+          onPress={() => router.push('/auth/login')}
           style={styles.button}
         >
-          Register
+          Back to Login
         </Button>
 
-        <Link href="/" style={styles.backLink}>
-          <Text>Back to Home</Text>
-        </Link>
+        <Button
+          mode="text"
+          onPress={() => router.push('/')}
+          style={styles.button}
+        >
+          Back to Home
+        </Button>
       </View>
     </View>
   );
@@ -169,9 +207,5 @@ const styles = StyleSheet.create({
     color: 'red',
     textAlign: 'center',
     marginBottom: 16,
-  },
-  backLink: {
-    marginTop: 16,
-    alignSelf: 'center',
   },
 });

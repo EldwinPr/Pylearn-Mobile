@@ -1,15 +1,42 @@
-import React from 'react';
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { config } from 'src/config/api';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const checkLoginStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      console.log('Current token:', token); // Debug log
+      setIsLoggedIn(!!token);
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      setIsLoggedIn(false);
+    }
+  };
+
+    // Check on mount and when screen comes into focus
+    useEffect(() => {
+      checkLoginStatus();
+    }, []);
+  
+    // Also check when screen comes into focus
+    useFocusEffect(
+      React.useCallback(() => {
+        checkLoginStatus();
+      }, [])
+    );
+
   const handleStartLearning = () => {
-    // Implement scrolling to yellow section
     console.log('Start learning clicked');
   };
 
@@ -17,9 +44,46 @@ export default function HomeScreen() {
     router.push('/auth/login');
   };
 
+  const handleLogout = async () => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      console.log('Token before logout:', token); // Debug log
+
+      if (token) {
+        try {
+          const response = await fetch(`${config.API_URL}/logout`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          console.log('Logout response:', response.status); // Debug log
+        } catch (error) {
+          console.error('API logout error:', error);
+        }
+      }
+
+      // Clear storage and state
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('userEmail');
+      console.log('Storage cleared'); // Debug log
+      
+      setIsLoggedIn(false);
+      router.replace('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCardPress = (section: string) => {
     console.log(`${section} card pressed`);
   };
+
+  console.log('Current login state:', isLoggedIn);
 
   return (
     <ScrollView style={styles.container}>
@@ -27,8 +91,14 @@ export default function HomeScreen() {
         colors={['#1e1e1e', '#3670a1']}
         style={styles.gradientSection}
       >
-        <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
-          <Text style={styles.loginBtnText}>Login</Text>
+        <TouchableOpacity 
+          style={[styles.loginBtn, isLoggedIn && styles.logoutBtn]} 
+          onPress={isLoggedIn ? handleLogout : handleLogin}
+          disabled={isLoading}
+        >
+          <Text style={[styles.loginBtnText, isLoggedIn && styles.logoutBtnText]}>
+            {isLoading ? 'Loading...' : isLoggedIn ? 'Logout' : 'Login'}
+          </Text>
         </TouchableOpacity>
         <View style={styles.header}>
           <Image
@@ -42,7 +112,10 @@ export default function HomeScreen() {
             <Text style={styles.subtitle}>
               Belajar Python dengan cara yang interaktif dan menyenangkan
             </Text>
-            <TouchableOpacity style={styles.startBtn} onPress={handleStartLearning}>
+            <TouchableOpacity 
+              style={styles.startBtn} 
+              onPress={() => console.log('Start learning clicked')}
+            >
               <Text style={styles.startBtnText}>Mulai Belajar</Text>
             </TouchableOpacity>
           </View>
@@ -106,9 +179,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 25,
   },
+  logoutBtn: {
+    backgroundColor: '#ff5252',
+  },
   loginBtnText: {
     color: '#333',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  logoutBtnText: {
+    color: '#fff',
   },
   header: {
     alignItems: 'center',
