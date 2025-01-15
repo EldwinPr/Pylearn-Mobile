@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Alert } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
 
@@ -16,7 +15,6 @@ export default function HomeScreen() {
   const checkLoginStatus = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      console.log('Current token:', token); // Debug log
       setIsLoggedIn(!!token);
     } catch (error) {
       console.error('Error checking login status:', error);
@@ -24,21 +22,15 @@ export default function HomeScreen() {
     }
   };
 
-    // Check on mount and when screen comes into focus
-    useEffect(() => {
-      checkLoginStatus();
-    }, []);
-  
-    // Also check when screen comes into focus
-    useFocusEffect(
-      React.useCallback(() => {
-        checkLoginStatus();
-      }, [])
-    );
+  useEffect(() => {
+    checkLoginStatus();
+  }, []);
 
-  const handleStartLearning = () => {
-    console.log('Start learning clicked');
-  };
+  useFocusEffect(
+    React.useCallback(() => {
+      checkLoginStatus();
+    }, [])
+  );
 
   const handleLogin = () => {
     router.push('/auth/login');
@@ -48,28 +40,23 @@ export default function HomeScreen() {
     try {
       setIsLoading(true);
       const token = await AsyncStorage.getItem('token');
-      console.log('Token before logout:', token); // Debug log
 
       if (token) {
         try {
-          const response = await fetch(`${config.API_URL}/logout`, {
+          await fetch(`${config.API_URL}/logout`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
           });
-          console.log('Logout response:', response.status); // Debug log
         } catch (error) {
           console.error('API logout error:', error);
         }
       }
 
-      // Clear storage and state
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('userEmail');
-      console.log('Storage cleared'); // Debug log
-      
       setIsLoggedIn(false);
       router.replace('/');
     } catch (error) {
@@ -80,10 +67,22 @@ export default function HomeScreen() {
   };
 
   const handleCardPress = (section: string) => {
-    console.log(`${section} card pressed`);
+    switch (section) {
+      case 'Materi':
+        // router.push('/materi');
+        break;
+      case 'Latihan':
+        // router.push('/latihan');
+        break;
+      case 'Online Compiler':
+        router.push('/onlinecomp');
+        break;
+    }
   };
 
-  console.log('Current login state:', isLoggedIn);
+  const handleStartLearning = () => {
+    // router.push('/materi');
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -112,10 +111,7 @@ export default function HomeScreen() {
             <Text style={styles.subtitle}>
               Belajar Python dengan cara yang interaktif dan menyenangkan
             </Text>
-            <TouchableOpacity 
-              style={styles.startBtn} 
-              onPress={() => console.log('Start learning clicked')}
-            >
+            <TouchableOpacity style={styles.startBtn} onPress={handleStartLearning}>
               <Text style={styles.startBtnText}>Mulai Belajar</Text>
             </TouchableOpacity>
           </View>
@@ -158,6 +154,7 @@ export default function HomeScreen() {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
