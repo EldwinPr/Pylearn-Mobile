@@ -2,18 +2,19 @@ import React from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-const App = () => {
+export default function HomeScreen() {
   const handleStartLearning = () => {
     // Implement scrolling to yellow section
     console.log('Start learning clicked');
   };
 
   const handleLogin = () => {
-    // Implement login logic
-    console.log('Login clicked');
+    router.push('/auth/login');
   };
 
   const handleCardPress = (section: string) => {
@@ -56,9 +57,14 @@ const App = () => {
               style={styles.card}
               onPress={() => handleCardPress(item)}
             >
-              <Image
-                source={{ uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-ALNq4uLXrMRsvRPI5CIjRGtruWlupw.png' }}
-                style={styles.cardImage}
+              <Ionicons 
+                name={
+                  index === 0 ? 'book' : 
+                  index === 1 ? 'code-working' : 
+                  'terminal'
+                } 
+                size={80} 
+                color="#3670a1" 
               />
               <Text style={styles.cardTitle}>{item}</Text>
               <Text style={styles.cardDescription}>
@@ -78,7 +84,7 @@ const App = () => {
       </View>
     </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -164,12 +170,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  cardImage: {
-    width: 80,
-    height: 80,
-    marginBottom: 20,
-    resizeMode: 'contain',
-  },
   cardTitle: {
     color: '#3670a1',
     fontSize: 24,
@@ -190,6 +190,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-export default App;
-
