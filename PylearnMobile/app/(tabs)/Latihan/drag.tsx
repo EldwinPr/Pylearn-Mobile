@@ -9,7 +9,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import Navbar from '../navbar'; // Sesuaikan path dengan navbar Anda
+import Navbar from '../navbar';
+import Footer from '../footer';
 
 const { width } = Dimensions.get('window');
 
@@ -34,13 +35,13 @@ export default function DragAndDrop() {
       });
       return newState;
     });
-    positions[key].setValue({ x: 0, y: 0 }); // Kembali ke posisi awal
+    positions[key].setValue({ x: 0, y: 0 });
   };
 
   const checkAnswers = () => {
     const correctAnswers = {
-      dropzone1: 'draggable1', // 'print'
-      dropzone2: 'draggable2', // '("Hello World")'
+      dropzone1: 'draggable1',
+      dropzone2: 'draggable2',
     };
 
     const isCorrect = Object.entries(correctAnswers).every(
@@ -168,6 +169,7 @@ export default function DragAndDrop() {
           <Text style={styles.submitButtonText}>Submit</Text>
         </TouchableOpacity>
       </View>
+      <Footer />
     </View>
   );
 }

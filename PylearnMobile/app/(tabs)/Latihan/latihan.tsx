@@ -8,14 +8,15 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Navbar from '../navbar'; // Pastikan path Navbar benar
+import Navbar from '../navbar';
+import Footer from '../footer';
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
 export default function LatihanScreen() {
   const router = useRouter();
-  const [pressedButton, setPressedButton] = useState<string | null>(null); // Menyimpan tombol yang ditekan
+  const [pressedButton, setPressedButton] = useState<string | null>(null);
 
   const handleNavigate = (page: string) => {
     router.push(`/(tabs)/Latihan/${page}`);
@@ -23,10 +24,7 @@ export default function LatihanScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Navbar */}
       <Navbar />
-
-      {/* Main Content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Pilih Jenis Latihan</Text>
@@ -34,12 +32,23 @@ export default function LatihanScreen() {
             Silakan pilih jenis latihan yang ingin kamu kerjakan.
           </Text>
           <View style={styles.exerciseGrid}>
-            {[
-              { icon: 'pencil', title: 'Fill in The Blanks', page: 'fill' },
-              { icon: 'move', title: 'Drag and Drop', page: 'drag' },
-              { icon: 'list', title: 'Multiple Choice', page: 'multiple-choice' },
-              { icon: 'star', title: 'Skor', page: 'score' },
-            ].map((exercise, index) => (
+            {[{
+              icon: 'pencil',
+              title: 'Fill in The Blanks',
+              page: 'fill',
+            }, {
+              icon: 'move',
+              title: 'Drag and Drop',
+              page: 'drag',
+            }, {
+              icon: 'list',
+              title: 'Multiple Choice',
+              page: 'multiple-choice',
+            }/*, {
+              icon: 'star',
+              title: 'Skor',
+              page: 'score',
+            }*/].map((exercise, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
@@ -51,9 +60,9 @@ export default function LatihanScreen() {
                 onPress={() => handleNavigate(exercise.page)}
               >
                 <Ionicons
-                  name={exercise.icon} // Dinamis: ikon diambil dari array data
+                  name={exercise.icon}
                   size={50}
-                  color={pressedButton === exercise.page ? '#333' : '#ffffff'} // Warna ikon berubah saat ditekan
+                  color={pressedButton === exercise.page ? '#333' : '#ffffff'}
                 />
                 <Text
                   style={[
@@ -68,13 +77,7 @@ export default function LatihanScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          &copy; 2024 PyLearn | Belajar Python dengan mudah
-        </Text>
-      </View>
+      <Footer />
     </View>
   );
 }
@@ -117,7 +120,7 @@ const styles = StyleSheet.create({
     width: width > 600 ? 180 : width * 0.4,
   },
   pressedButton: {
-    backgroundColor: '#ffc107', // Kuning saat ditekan
+    backgroundColor: '#ffc107',
   },
   buttonText: {
     marginTop: 10,
@@ -126,15 +129,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pressedButtonText: {
-    color: '#333', // Warna teks berubah saat tombol ditekan
-  },
-  footer: {
-    backgroundColor: '#3670a1',
-    padding: 20,
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#ffffff',
-    textAlign: 'center',
+    color: '#333',
   },
 });

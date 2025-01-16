@@ -1,54 +1,108 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
 export default function Navbar() {
   const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    checkLoginStatus();
+  }, []);
+
+  const checkLoginStatus = async () => {
+    const token = await AsyncStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('token');
+    setIsLoggedIn(false);
+    router.push('/(tabs)');
+  };
+
+  const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => (
+    <TouchableOpacity onPress={() => { router.push(to); setIsMenuOpen(false); }}>
+      <Text style={styles.navLink}>{children}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.navbar}>
-      {/* Logo */}
-      <TouchableOpacity style={styles.logo} onPress={() => router.push('/(tabs)')}>
-        <Ionicons name="logo-python" size={32} color="#ffc107" />
-        <Text style={styles.logoText}>
-          <Text style={styles.highlight}>Py</Text>learn
-        </Text>
-      </TouchableOpacity>
-
-      {/* Menu Links */}
-      {width > 768 ? (
-        <View style={styles.navLinks}>
-          {/* <TouchableOpacity onPress={() => router.push('/(tabs)/materi')}>
-            <Text style={styles.navLink}>Materi</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity onPress={() => router.push('/(tabs)/Latihan/latihan')}>
-            <Text style={styles.navLink}>Latihan</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/onlinecomp')}>
-            <Text style={styles.navLink}>Online Compiler</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/auth/login')}>
-            <Text style={styles.navLink}>Login</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.mobileMenuBtn} onPress={() => router.push('/(tabs)')}>
-          <Ionicons name="menu" size={32} color="#ffffff" />
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={['#1e1e1e', '#3670a1']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.navbar}
+      >
+        {/* Logo */}
+        <TouchableOpacity style={styles.logo} onPress={() => router.push('/(tabs)')}>
+          <Ionicons name="logo-python" size={32} color="#ffc107" />
+          <Text style={styles.logoText}>
+            <Text style={styles.highlight}>Py</Text>learn
+          </Text>
         </TouchableOpacity>
+
+        {/* Menu Links */}
+        {width > 768 ? (
+          <View style={styles.navLinks}>
+            <NavLink to="/(tabs)/materi">Materi</NavLink>
+            <NavLink to="/(tabs)/Latihan/latihan">Latihan</NavLink>
+            <NavLink to="/(tabs)/onlinecomp">Online Compiler</NavLink>
+            {isLoggedIn ? (
+              <>
+                <NavLink to="/(tabs)/account/Account">Akun</NavLink>
+                <TouchableOpacity onPress={handleLogout}>
+                  <Text style={[styles.navLink, styles.logoutBtn]}>Log Out</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <NavLink to="/auth/login">Login</NavLink>
+            )}
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.mobileMenuBtn} onPress={() => setIsMenuOpen(!isMenuOpen)}>
+            <Ionicons name="menu" size={32} color="#ffffff" />
+          </TouchableOpacity>
+        )}
+      </LinearGradient>
+
+      {/* Mobile Menu Dropdown */}
+      {width <= 768 && isMenuOpen && (
+        <View style={styles.mobileMenu}>
+          <NavLink to="/(tabs)/materi">Materi</NavLink>
+          <NavLink to="/(tabs)/Latihan/latihan">Latihan</NavLink>
+          <NavLink to="/(tabs)/onlinecomp">Online Compiler</NavLink>
+          {isLoggedIn ? (
+            <>
+              <NavLink to="/(tabs)/account/Account">Akun</NavLink>
+              <TouchableOpacity onPress={handleLogout}>
+                <Text style={[styles.navLink, styles.logoutBtn]}>Log Out</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <NavLink to="/auth/login">Login</NavLink>
+          )}
+        </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    paddingTop: Platform.OS === 'android' ? 25 : 0,
+  },
   navbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#3670a1',
     padding: 15,
   },
   logo: {
@@ -75,5 +129,21 @@ const styles = StyleSheet.create({
   },
   mobileMenuBtn: {
     backgroundColor: 'transparent',
+  },
+  mobileMenu: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 80 : 55,
+    left: 0,
+    right: 0,
+    backgroundColor: '#3670a1',
+    padding: 15,
+    zIndex: 1000,
+  },
+  logoutBtn: {
+    backgroundColor: '#ffc107',
+    color: '#333',
+    padding: 8,
+    borderRadius: 5,
+    overflow: 'hidden',
   },
 });
