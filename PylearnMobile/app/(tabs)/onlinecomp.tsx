@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { Text, TextInput, Button } from 'react-native-paper';
 import { useNavigation } from 'expo-router';
+import NavHeader from '../../components/NavHeader';
 
 export default function OnlineCompilerScreen() {
   const [code, setCode] = useState<string>('print("Hello, World!")');
@@ -51,6 +52,7 @@ export default function OnlineCompilerScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
+        <NavHeader />
         <View style={styles.section}>
           <Text style={styles.title}>Tuliskan kode python mu di bawah!</Text>
           

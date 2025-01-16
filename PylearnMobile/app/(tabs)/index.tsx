@@ -72,7 +72,7 @@ export default function HomeScreen() {
         // router.push('/materi');
         break;
       case 'Latihan':
-        // router.push('/latihan');
+        router.push('../latihan/latihan');
         break;
       case 'Online Compiler':
         router.push('/onlinecomp');
