@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
@@ -128,105 +128,113 @@ export default function DragScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <NavHeader />
       <View style={styles.contentSection}>
-        <View style={styles.innerContent}>
-          <Text style={styles.title}>Drag and Drop</Text>
-          <Text style={styles.subtitle}>Letakan Blok di tempat yang sesuai:</Text>
+        <Text style={styles.title}>Drag and Drop</Text>
+        <Text style={styles.subtitle}>Place the blocks in the correct order:</Text>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
-          <View style={styles.outputDisplay}>
-            <Text style={styles.outputText}>Output: Hello World</Text>
-          </View>
+        <View style={styles.outputDisplay}>
+          <Text style={styles.outputText}>Output: Hello World</Text>
+        </View>
 
-          <View style={styles.dropZoneContainer}>
-            {dropSlots.map((slot) => (
-              <TouchableOpacity
-                key={slot.id}
-                style={[
-                  styles.dropSlot,
-                  slot.content && (slot.isCorrect ? styles.slotCorrect : styles.slotIncorrect),
-                  !slot.content && selectedItem && styles.dropSlotActive
-                ]}
-                onPress={() => handleSlotPress(slot.id)}
-                disabled={isLoading}
-              >
-                <Text style={[
-                  styles.slotText,
-                  slot.content && slot.isCorrect && styles.textCorrect,
-                  slot.content && !slot.isCorrect && styles.textIncorrect
-                ]}>
-                  {slot.content || 'Drop Here'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.itemsContainer}>
-            {dragItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.dragItem,
-                  selectedItem === item.text && styles.dragItemSelected
-                ]}
-                onPress={() => handleItemPress(item.text)}
-                disabled={isLoading}
-              >
-                <Text style={styles.dragItemText}>{item.text}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <Button 
-              mode="contained" 
-              onPress={handleSubmit}
-              style={styles.submitButton}
-              loading={isLoading}
+        <View style={styles.dropZoneContainer}>
+          {dropSlots.map((slot) => (
+            <TouchableOpacity
+              key={slot.id}
+              style={[
+                styles.dropSlot,
+                slot.content && (slot.isCorrect ? styles.slotCorrect : styles.slotIncorrect),
+                !slot.content && selectedItem && styles.dropSlotActive
+              ]}
+              onPress={() => handleSlotPress(slot.id)}
               disabled={isLoading}
             >
-              Submit
-            </Button>
-            <Button 
-              mode="outlined" 
-              onPress={handleReset}
-              style={styles.resetButton}
+              <Text style={[
+                styles.slotText,
+                slot.content && slot.isCorrect && styles.textCorrect,
+                slot.content && !slot.isCorrect && styles.textIncorrect
+              ]}>
+                {slot.content || 'Drop Here'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.itemsContainer}>
+          {dragItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.dragItem,
+                selectedItem === item.text && styles.dragItemSelected
+              ]}
+              onPress={() => handleItemPress(item.text)}
               disabled={isLoading}
             >
-              Reset
-            </Button>
-          </View>
+              <Text style={styles.dragItemText}>{item.text}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.buttonContainer}>
+        <Button 
+          mode="contained" 
+          onPress={handleSubmit}
+          style={styles.submitButton}
+          labelStyle={{ color: '#ffff' }}
+        >
+          Submit
+        </Button>
+        <Button 
+          mode="outlined" 
+          onPress={handleReset}
+          style={styles.resetButton}
+          labelStyle={{ color: '#000000' }}
+        >
+          Reset
+        </Button>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
+    backgroundColor: '#f0f2f5',
   },
   contentSection: {
-    flex: 1,
     backgroundColor: 'white',
-  },
-  innerContent: {
+    borderRadius: 12,
+    margin: 16,
     padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: 800,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#3670a1',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     marginBottom: 20,
+    textAlign: 'center',
   },
   errorText: {
     color: '#f44336',
@@ -237,36 +245,39 @@ const styles = StyleSheet.create({
   outputDisplay: {
     backgroundColor: '#f8f8f8',
     padding: 15,
-    borderRadius: 5,
+    borderRadius: 8,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   outputText: {
     fontSize: 16,
     textAlign: 'center',
+    fontWeight: '500',
   },
   dropZoneContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
     marginBottom: 20,
   },
   dropSlot: {
-    width: width > 600 ? 180 : 150,
+    width: width > 600 ? 160 : 140,
     height: 50,
     backgroundColor: '#f4f4f4',
-    borderRadius: 5,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#ddd',
   },
   dropSlotActive: {
     borderColor: '#ffc107',
-    borderWidth: 2,
     borderStyle: 'dashed',
   },
   slotText: {
     color: '#666',
+    fontSize: 16,
   },
   itemsContainer: {
     flexDirection: 'row',
@@ -277,8 +288,8 @@ const styles = StyleSheet.create({
   },
   dragItem: {
     backgroundColor: '#3670a1',
-    padding: 10,
-    borderRadius: 5,
+    padding: 12,
+    borderRadius: 8,
     minWidth: 100,
   },
   dragItemSelected: {
@@ -288,22 +299,26 @@ const styles = StyleSheet.create({
   dragItemText: {
     color: 'white',
     textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '500',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
     marginTop: 20,
   },
   submitButton: {
     backgroundColor: '#3670a1',
     flex: 2,
     maxWidth: 200,
+    borderRadius: 8,
   },
   resetButton: {
-    borderColor: '#3670a1',
     flex: 1,
     maxWidth: 100,
+    borderRadius: 8,
+    backgroundColor: '#ffc107',
   },
   slotCorrect: {
     backgroundColor: '#e8f8e8',
@@ -320,3 +335,4 @@ const styles = StyleSheet.create({
     color: '#f44336',
   },
 });
+

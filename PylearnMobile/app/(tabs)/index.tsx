@@ -69,7 +69,7 @@ export default function HomeScreen() {
   const handleCardPress = (section: string) => {
     switch (section) {
       case 'Materi':
-        // router.push('/materi');
+        router.push('/materi');
         break;
       case 'Latihan':
         router.push('../latihan/latihan');

@@ -64,7 +64,7 @@ export default function NavHeader() {
   };
 
   const navigationItems: NavigationItem[] = [
-    { label: 'Materi', path: '/' },
+    { label: 'Materi', path: '/materi' },
     { label: 'Latihan', path: '/latihan/latihan' },
     { label: 'Online Compiler', path: '/onlinecomp' },
   ];
