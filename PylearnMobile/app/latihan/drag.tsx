@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
 import NavHeader from '../../components/NavHeader';
@@ -12,96 +13,107 @@ interface DropSlot {
   isCorrect?: boolean;
 }
 
+interface DragItem {
+  id: string;
+  text: string;
+}
+
 export default function DragScreen() {
   const [dropSlots, setDropSlots] = useState<DropSlot[]>([
     { id: 'slot1', content: null },
     { id: 'slot2', content: null }
   ]);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const dragItems = [
+  const dragItems: DragItem[] = [
     { id: '1', text: 'print' },
     { id: '2', text: '("Hello World")' },
     { id: '3', text: 'System.out.println' }
   ];
 
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const correctAnswers = ['print', '("Hello World")'];
 
+  const getAuthHeaders = async () => {
+    const token = await AsyncStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
+
   const handleItemPress = (itemText: string) => {
-    if (selectedItem === itemText) {
-      setSelectedItem(null);
-    } else {
-      setSelectedItem(itemText);
-    }
+    if (isLoading) return;
+    setSelectedItem(selectedItem === itemText ? null : itemText);
   };
 
   const handleSlotPress = (slotId: string) => {
-    if (selectedItem) {
-      setDropSlots(currentSlots =>
-        currentSlots.map(slot => {
-          if (slot.id === slotId) {
-            // Check if this answer is correct for this position
-            const index = currentSlots.findIndex(s => s.id === slotId);
-            const isCorrect = selectedItem === correctAnswers[index];
-            return {
-              ...slot,
-              content: selectedItem,
-              isCorrect
-            };
-          }
-          return slot;
-        })
-      );
-      setSelectedItem(null);
+    if (!selectedItem || isLoading) return;
 
-      // After updating the slots, check all answers
-      setTimeout(checkAnswers, 100);
-    }
-  };
-
-  const checkAnswers = async () => {
-    const allFilled = dropSlots.every(slot => slot.content !== null);
-    if (!allFilled) return;
-
-    let correctCount = dropSlots.reduce((count, slot, index) => {
-      return slot.content === correctAnswers[index] ? count + 1 : count;
-    }, 0);
-
-    if (correctCount > 0) {
-      const score = correctCount * 50; // 50 points per correct answer
-      if (correctCount === correctAnswers.length) {
-        try {
-          await updateProgress(score);
-          alert(`Perfect! You scored ${score} points!`);
-        } catch (error) {
-          console.error('Error updating progress:', error);
+    setDropSlots(currentSlots =>
+      currentSlots.map(slot => {
+        if (slot.id === slotId) {
+          const index = currentSlots.findIndex(s => s.id === slotId);
+          return {
+            ...slot,
+            content: selectedItem,
+            isCorrect: selectedItem === correctAnswers[index]
+          };
         }
-      }
-    }
+        return slot;
+      })
+    );
+    setSelectedItem(null);
   };
 
   const updateProgress = async (score: number) => {
     try {
+      setIsLoading(true);
+      const headers = await getAuthHeaders();
       const userEmail = await AsyncStorage.getItem('userEmail');
-      if (!userEmail) return;
+      
+      if (!userEmail) throw new Error('User not authenticated');
 
       const response = await fetch(`${config.API_URL}/progress/update`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           user_email: userEmail,
-          score: score,
+          score,
           drag: true
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update progress');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update progress');
       }
     } catch (error) {
-      console.error('Error updating progress:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    const allFilled = dropSlots.every(slot => slot.content !== null);
+    if (!allFilled) {
+      setError('Please fill all slots before submitting');
+      return;
+    }
+
+    const correctCount = dropSlots.reduce((count, slot, index) => 
+      slot.content === correctAnswers[index] ? count + 1 : count, 0);
+
+    if (correctCount > 0) {
+      const score = correctCount * 50;
+      try {
+        await updateProgress(score);
+        alert(`Score: ${score} points!`);
+      } catch (error) {
+        console.error('Error updating progress:', error);
+      }
     }
   };
 
@@ -112,62 +124,82 @@ export default function DragScreen() {
       isCorrect: undefined 
     })));
     setSelectedItem(null);
+    setError(null);
   };
 
   return (
     <View style={styles.container}>
+      <NavHeader />
       <View style={styles.contentSection}>
-        <NavHeader />
-        <Text style={styles.title}>Drag and Drop</Text>
-        <Text style={styles.subtitle}>Letakan Blok di tempat yang sesuai:</Text>
+        <View style={styles.innerContent}>
+          <Text style={styles.title}>Drag and Drop</Text>
+          <Text style={styles.subtitle}>Letakan Blok di tempat yang sesuai:</Text>
 
-        <View style={styles.outputDisplay}>
-          <Text style={styles.outputText}>Output: Hello World</Text>
-        </View>
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
-        <View style={styles.dropZoneContainer}>
-          {dropSlots.map((slot) => (
-            <TouchableOpacity
-              key={slot.id}
-              style={[
-                styles.dropSlot,
-                slot.content && (slot.isCorrect ? styles.slotCorrect : styles.slotIncorrect),
-                !slot.content && selectedItem && styles.dropSlotActive
-              ]}
-              onPress={() => handleSlotPress(slot.id)}
+          <View style={styles.outputDisplay}>
+            <Text style={styles.outputText}>Output: Hello World</Text>
+          </View>
+
+          <View style={styles.dropZoneContainer}>
+            {dropSlots.map((slot) => (
+              <TouchableOpacity
+                key={slot.id}
+                style={[
+                  styles.dropSlot,
+                  slot.content && (slot.isCorrect ? styles.slotCorrect : styles.slotIncorrect),
+                  !slot.content && selectedItem && styles.dropSlotActive
+                ]}
+                onPress={() => handleSlotPress(slot.id)}
+                disabled={isLoading}
+              >
+                <Text style={[
+                  styles.slotText,
+                  slot.content && slot.isCorrect && styles.textCorrect,
+                  slot.content && !slot.isCorrect && styles.textIncorrect
+                ]}>
+                  {slot.content || 'Drop Here'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.itemsContainer}>
+            {dragItems.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.dragItem,
+                  selectedItem === item.text && styles.dragItemSelected
+                ]}
+                onPress={() => handleItemPress(item.text)}
+                disabled={isLoading}
+              >
+                <Text style={styles.dragItemText}>{item.text}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <Button 
+              mode="contained" 
+              onPress={handleSubmit}
+              style={styles.submitButton}
+              loading={isLoading}
+              disabled={isLoading}
             >
-              <Text style={[
-                styles.slotText,
-                slot.content && slot.isCorrect && styles.textCorrect,
-                slot.content && !slot.isCorrect && styles.textIncorrect
-              ]}>
-                {slot.content || 'Drop Here'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.itemsContainer}>
-          {dragItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.dragItem,
-                selectedItem === item.text && styles.dragItemSelected
-              ]}
-              onPress={() => handleItemPress(item.text)}
+              Submit
+            </Button>
+            <Button 
+              mode="outlined" 
+              onPress={handleReset}
+              style={styles.resetButton}
+              disabled={isLoading}
             >
-              <Text style={styles.dragItemText}>{item.text}</Text>
-            </TouchableOpacity>
-          ))}
+              Reset
+            </Button>
+          </View>
         </View>
-
-        <TouchableOpacity 
-          style={styles.resetButton}
-          onPress={handleReset}
-        >
-          <Text style={styles.resetButtonText}>Reset</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -177,20 +209,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f4f4f4',
-    padding: 20,
   },
   contentSection: {
+    flex: 1,
     backgroundColor: 'white',
-    borderRadius: 10,
+  },
+  innerContent: {
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   title: {
     fontSize: 24,
@@ -202,6 +227,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 20,
+  },
+  errorText: {
+    color: '#f44336',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontSize: 16,
   },
   outputDisplay: {
     backgroundColor: '#f8f8f8',
@@ -228,10 +259,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
-  },
-  dropSlotFilled: {
-    backgroundColor: '#e8f4ff',
-    borderColor: '#3670a1',
   },
   dropSlotActive: {
     borderColor: '#ffc107',
@@ -262,16 +289,21 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
   },
-  resetButton: {
-    backgroundColor: '#3670a1',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 20,
   },
-  resetButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  submitButton: {
+    backgroundColor: '#3670a1',
+    flex: 2,
+    maxWidth: 200,
+  },
+  resetButton: {
+    borderColor: '#3670a1',
+    flex: 1,
+    maxWidth: 100,
   },
   slotCorrect: {
     backgroundColor: '#e8f8e8',

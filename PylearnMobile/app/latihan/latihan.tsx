@@ -1,116 +1,135 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { Text, Card } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { router } from 'expo-router';
-import { FontAwesome5 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NavHeader from '../../components/NavHeader';
-
-const { width } = Dimensions.get('window');
-
-const exercises = [
-  {
-    title: 'Fill in The Blanks',
-    icon: 'pencil-alt',
-    route: '/latihan/fill',
-    description: 'Latihan mengisi bagian yang kosong'
-  },
-  {
-    title: 'Drag and Drop',
-    icon: 'arrows-alt',
-    route: '/latihan/drag',
-    description: 'Latihan menyusun kode'
-  },
-  {
-    title: 'Multiple Choice',
-    icon: 'tasks',
-    route: 'multiple-choice',
-    description: 'Latihan pilihan ganda'
-  },
-  {
-    title: 'Skor',
-    icon: 'star',
-    route: 'score',
-    description: 'Lihat pencapaianmu'
-  }
-];
+import { config } from 'src/config/api';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function LatihanScreen() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const window = Dimensions.get('window');
+  const isMobile = window.width < 768;
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      setIsLoggedIn(!!token);
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      setIsLoggedIn(false);
+    }
+  };
+
   const handleExercisePress = (route: string) => {
+    if (!isLoggedIn) {
+      router.push('/auth/login');
+      return;
+    }
     router.push(route as any);
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      <NavHeader />
-      <View style={styles.content}>
-        <Card style={styles.header}>
-          <Card.Content>
-            <Text style={styles.title}>Pilih Jenis Latihan</Text>
-            <Text style={styles.subtitle}>Silakan pilih jenis latihan yang ingin kamu kerjakan.</Text>
-          </Card.Content>
-        </Card>
+  const exercises = [
+    {
+      title: 'Fill in The Blanks',
+      icon: 'pencil',
+      route: '/latihan/fill',
+      description: 'Latihan mengisi bagian yang kosong'
+    },
+    {
+      title: 'Drag and Drop',
+      icon: 'arrows',
+      route: '/latihan/drag',
+      description: 'Latihan menyusun kode'
+    },
+    {
+      title: 'Multiple Choice',
+      icon: 'list-ul',
+      route: '/latihan/multiplechoice',
+      description: 'Latihan pilihan ganda'
+    },
+    {
+      title: 'Skor',
+      icon: 'star',
+      route: '/latihan/score',
+      description: 'Lihat pencapaianmu'
+    }
+  ];
 
-        <View style={styles.exerciseGrid}>
-          {exercises.map((exercise, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.exerciseButton}
-              onPress={() => handleExercisePress(exercise.route)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.iconContainer}>
-                <FontAwesome5
-                  name={exercise.icon}
-                  size={24}
-                  color="#3670a1"
+  return (
+    <View style={styles.container}>
+      <NavHeader />
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Pilih Jenis Latihan</Text>
+          <Text style={styles.subtitle}>
+            Silakan pilih jenis latihan yang ingin kamu kerjakan
+          </Text>
+
+          <View style={styles.exerciseGrid}>
+            {exercises.map((exercise, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.exerciseButton}
+                onPress={() => handleExercisePress(exercise.route)}
+              >
+                <FontAwesome 
+                  name={exercise.icon as any}
+                  size={32}
+                  color="white"
+                  style={styles.icon}
                 />
-              </View>
-              <Text style={styles.buttonTitle}>{exercise.title}</Text>
-              <Text style={styles.buttonDescription}>{exercise.description}</Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.buttonText}>{exercise.title}</Text>
+                <Text style={styles.buttonDescription}>{exercise.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f4f4f4',
   },
-  content: {
-    padding: 16,
+  scrollView: {
     flex: 1,
   },
-  header: {
-    marginBottom: 24,
-    elevation: 4,
+  content: {
+    padding: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: '#3670a1',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#7f8c8d',
+    color: '#666',
+    marginBottom: 20,
   },
   exerciseGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 16,
+    gap: 20,
+    justifyContent: 'center',
   },
   exerciseButton: {
-    backgroundColor: '#ffffff',
-    width: width > 600 ? (width - 48) / 2 : width - 32,
-    borderRadius: 12,
+    backgroundColor: '#3670a1',
+    borderRadius: 10,
     padding: 20,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
+    width: Dimensions.get('window').width > 768 ? 300 : '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 150,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -120,21 +139,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  iconContainer: {
-    backgroundColor: '#ecf0f1',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
+  icon: {
+    marginBottom: 12,
   },
-  buttonTitle: {
-    color: '#2c3e50',
+  buttonText: {
+    color: 'white',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     marginBottom: 8,
+    textAlign: 'center',
   },
   buttonDescription: {
-    color: '#7f8c8d',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
-  },
+    textAlign: 'center',
+  }
 });
-

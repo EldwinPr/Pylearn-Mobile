@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, TextInput, Button, Card, ProgressBar, IconButton } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
@@ -46,8 +46,6 @@ const questions: Question[] = [
   }
 ];
 
-const { width } = Dimensions.get('window');
-
 export default function FillScreen() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answer, setAnswer] = useState('');
@@ -55,8 +53,52 @@ export default function FillScreen() {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [progress, setProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getAuthHeaders = async () => {
+    const token = await AsyncStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
+
+  const updateProgress = async (finalScore: number) => {
+    try {
+      setIsLoading(true);
+      const headers = await getAuthHeaders();
+      const userEmail = await AsyncStorage.getItem('userEmail');
+      
+      if (!userEmail) throw new Error('User not authenticated');
+
+      const response = await fetch(`${config.API_URL}/progress/update`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          user_email: userEmail,
+          score: finalScore,
+          fill: true
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update progress');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const checkAnswer = async () => {
+    if (!answer.trim()) {
+      setError('Please enter an answer');
+      return;
+    }
+
     const correct = answer.toLowerCase() === questions[currentQuestion].answer.toLowerCase();
     setIsCorrect(correct);
     
@@ -81,31 +123,7 @@ export default function FillScreen() {
       setCurrentQuestion(prev => prev + 1);
       setAnswer('');
       setIsCorrect(null);
-    }
-  };
-
-  const updateProgress = async (finalScore: number) => {
-    try {
-      const userEmail = await AsyncStorage.getItem('userEmail');
-      if (!userEmail) return;
-
-      const response = await fetch(`${config.API_URL}/progress/update`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_email: userEmail,
-          score: finalScore,
-          fill: true
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update progress');
-      }
-    } catch (error) {
-      console.error('Error updating progress:', error);
+      setError(null);
     }
   };
 
@@ -116,6 +134,7 @@ export default function FillScreen() {
     setShowResult(false);
     setIsCorrect(null);
     setProgress(0);
+    setError(null);
   };
 
   if (showResult) {
@@ -132,6 +151,7 @@ export default function FillScreen() {
               onPress={restartQuiz}
               style={styles.button}
               labelStyle={styles.buttonLabel}
+              disabled={isLoading}
             >
               Try Again
             </Button>
@@ -145,10 +165,12 @@ export default function FillScreen() {
     <ScrollView style={styles.container}>
       <NavHeader />
       <Card style={styles.card}>
-        <Card.Content style={{ padding: 16 }}>
+        <Card.Content style={styles.cardContent}>
           <Text style={styles.title}>Fill in the Blanks - Python Syntax</Text>
           <ProgressBar progress={progress} color="#3670a1" style={styles.progressBar} />
           
+          {error && <Text style={styles.errorText}>{error}</Text>}
+
           <View style={styles.questionContainer}>
             <Text style={styles.questionText}>{questions[currentQuestion].question}</Text>
             <View style={styles.blankContainer}>
@@ -157,13 +179,16 @@ export default function FillScreen() {
               </Text>
               <TextInput
                 value={answer}
-                onChangeText={setAnswer}
+                onChangeText={text => {
+                  setAnswer(text);
+                  setError(null);
+                }}
                 style={[
                   styles.input,
                   { width: questions[currentQuestion].size * 12 }
                 ]}
                 mode="outlined"
-                disabled={isCorrect !== null}
+                disabled={isCorrect !== null || isLoading}
               />
               <Text style={styles.codeText}>
                 {questions[currentQuestion].blank.split('[blank]')[1]}
@@ -184,14 +209,28 @@ export default function FillScreen() {
             </View>
           )}
 
-          <Button
-            mode="contained"
-            onPress={isCorrect !== null ? nextQuestion : checkAnswer}
-            style={styles.button}
-            labelStyle={styles.buttonLabel}
-          >
-            {isCorrect !== null ? 'Next Question' : 'Submit Answer'}
-          </Button>
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="contained"
+              onPress={isCorrect !== null ? nextQuestion : checkAnswer}
+              style={styles.submitButton}
+              labelStyle={styles.buttonLabel}
+              loading={isLoading}
+              disabled={isLoading}
+            >
+              {isCorrect !== null ? 'Next Question' : 'Submit'}
+            </Button>
+            {isCorrect === null && (
+              <Button
+                mode="outlined"
+                onPress={() => setAnswer('')}
+                style={styles.resetButton}
+                disabled={!answer || isLoading}
+              >
+                Clear
+              </Button>
+            )}
+          </View>
         </Card.Content>
       </Card>
     </ScrollView>
@@ -211,8 +250,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '90%',
   },
+  cardContent: {
+    padding: 16,
+  },
   progressBar: {
-    marginBottom: 8, // Reduced from 12
+    marginBottom: 8,
     height: 8,
     borderRadius: 4,
   },
@@ -220,7 +262,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginBottom: 12, // Reduced from 20
+    marginBottom: 12,
     textAlign: 'center',
   },
   questionContainer: {
@@ -264,11 +306,21 @@ const styles = StyleSheet.create({
   incorrect: {
     backgroundColor: '#ffebee',
   },
-  button: {
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
     marginTop: 20,
+  },
+  submitButton: {
+    flex: 2,
+    maxWidth: 200,
     backgroundColor: '#3670a1',
-    borderRadius: 8,
-    paddingVertical: 8,
+  },
+  resetButton: {
+    flex: 1,
+    maxWidth: 100,
+    borderColor: '#3670a1',
   },
   buttonLabel: {
     fontSize: 16,
@@ -291,5 +343,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#7f8c8d',
   },
+  errorText: {
+    color: '#f44336',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontSize: 16,
+  },
+  button: {
+    marginTop: 20,
+    backgroundColor: '#3670a1',
+    borderRadius: 8,
+    paddingVertical: 8,
+  },
 });
-

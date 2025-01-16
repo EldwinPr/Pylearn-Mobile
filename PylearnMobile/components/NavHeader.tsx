@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Menu } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { config } from 'src/config/api';
 
 interface NavigationItem {
   label: string;
@@ -13,19 +14,59 @@ interface NavigationItem {
 
 export default function NavHeader() {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { width } = Dimensions.get('window');
   const isMobile = width < 768;
 
+  useEffect(() => {
+    checkLoginStatus();
+  }, []);
+
+  const checkLoginStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      setIsLoggedIn(!!token);
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      setIsLoggedIn(false);
+    }
+  };
+
   const handleLogout = async () => {
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('userEmail');
-    router.replace('/');
+    try {
+      const token = await AsyncStorage.getItem('token');
+      
+      if (token) {
+        try {
+          await fetch(`${config.API_URL}/logout`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+        } catch (error) {
+          console.error('API logout error:', error);
+        }
+      }
+
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('userEmail');
+      setIsLoggedIn(false);
+      router.replace('/');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
+  const handleLogin = () => {
+    router.push('/auth/login');
   };
 
   const navigationItems: NavigationItem[] = [
-    { label: 'Materi', path: '/' as const },
-    { label: 'Latihan', path: '/latihan/latihan' as const },
-    { label: 'Online Compiler', path: '/onlinecomp' as const },
+    { label: 'Materi', path: '/' },
+    { label: 'Latihan', path: '/latihan/latihan' },
+    { label: 'Online Compiler', path: '/onlinecomp' },
   ];
 
   const handleNavigation = (path: string) => {
@@ -56,8 +97,8 @@ export default function NavHeader() {
         />
       ))}
       <Menu.Item
-        onPress={handleLogout}
-        title="Login"
+        onPress={isLoggedIn ? handleLogout : handleLogin}
+        title={isLoggedIn ? "Logout" : "Login"}
         titleStyle={styles.menuItemText}
       />
     </Menu>
@@ -74,11 +115,21 @@ export default function NavHeader() {
           <Text style={styles.navText}>{item.label}</Text>
         </TouchableOpacity>
       ))}
+      {isLoggedIn && (
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleNavigation('/account')}
+        >
+          <Text style={styles.navText}>Akun</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity 
         style={styles.loginButton}
-        onPress={handleLogout}
+        onPress={isLoggedIn ? handleLogout : handleLogin}
       >
-        <Text style={styles.loginButtonText}>Login</Text>
+        <Text style={styles.loginButtonText}>
+          {isLoggedIn ? "Logout" : "Login"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
