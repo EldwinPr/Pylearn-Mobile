@@ -72,10 +72,10 @@ export default function HomeScreen() {
         // router.push('/materi');
         break;
       case 'Latihan':
-        // router.push('/latihan');
+        router.push('(tabs)/Latihan/latihan');
         break;
       case 'Online Compiler':
-        router.push('/onlinecomp');
+        router.push('(tabs)/onlinecomp');
         break;
     }
   };
