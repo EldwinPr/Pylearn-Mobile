@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,7 +34,8 @@ export default function Navbar() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content"/ >
       <LinearGradient
         colors={['#1e1e1e', '#3670a1']}
         start={{ x: 0, y: 0 }}
@@ -91,19 +92,21 @@ export default function Navbar() {
           )}
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    paddingTop: Platform.OS === 'android' ? 25 : 0,
+  container: {
+    
   },
   navbar: {
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 15,
+    // paddingTop: Platform.OS === 'android' ? 25 + (StatusBar.currentHeight || 0) : 25,
   },
   logo: {
     flexDirection: 'row',
@@ -132,7 +135,7 @@ const styles = StyleSheet.create({
   },
   mobileMenu: {
     position: 'absolute',
-    top: Platform.OS === 'android' ? 80 : 55,
+    top: Platform.OS === 'android' ? (80 + (StatusBar.currentHeight || 0)) : 80,
     left: 0,
     right: 0,
     backgroundColor: '#3670a1',
