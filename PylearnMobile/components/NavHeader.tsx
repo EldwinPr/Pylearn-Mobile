@@ -67,7 +67,6 @@ export default function NavHeader() {
     { label: 'Materi', path: '/materi' },
     { label: 'Latihan', path: '/latihan/latihan' },
     { label: 'Online Compiler', path: '/onlinecomp' },
-    { label: 'akun', path: '/account' },
   ];
 
   const handleNavigation = (path: string) => {
@@ -97,6 +96,14 @@ export default function NavHeader() {
           titleStyle={styles.menuItemText}
         />
       ))}
+      {/* Add Akun menu item when logged in */}
+      {isLoggedIn && (
+        <Menu.Item
+          onPress={() => handleNavigation('/account')}
+          title="Akun"
+          titleStyle={styles.menuItemText}
+        />
+      )}
       <Menu.Item
         onPress={isLoggedIn ? handleLogout : handleLogin}
         title={isLoggedIn ? "Logout" : "Login"}

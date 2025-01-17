@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import NavHeader from '../../components/NavHeader';
+import NavHeader from '../../../components/NavHeader';
 import { config } from 'src/config/api';
 import { Platform } from 'react-native';
 

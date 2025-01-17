@@ -1,36 +1,47 @@
+// app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform, View } from 'react-native';
-import { Home, Plane } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function TabLayout() {
+export default function TabsLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#3670a1',
-        tabBarBackground: () => (
-          <View style={{ backgroundColor: '#fff', height: '100%' }} />
-        ),
-        tabBarStyle: Platform.select({
-          ios: {
-            position: 'absolute'
-          },
-          default: {}
-        })
-      }}>
-      <Tabs.Screen
+    <Tabs screenOptions={{ 
+      tabBarStyle: { display: 'none' },
+      headerShown: false 
+    }}>
+      <Tabs.Screen 
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <Home size={28} color={color} />
+          title: 'Home',
         }}
       />
       <Tabs.Screen 
-        name="explore"
+        name="auth"
         options={{
-          title: "Explore",
-          tabBarIcon: ({ color }) => <Plane size={28} color={color} />
+          title: 'Auth',
+        }}
+      />
+      <Tabs.Screen 
+        name="latihan"
+        options={{
+          title: 'Latihan',
+        }}
+      />
+      <Tabs.Screen 
+        name="materi"
+        options={{
+          title: 'Materi',
+        }}
+      />
+      <Tabs.Screen 
+        name="onlinecomp"
+        options={{
+          title: 'Online Compiler',
+        }}
+      />
+      <Tabs.Screen 
+        name="account"
+        options={{
+          title: 'Account',
         }}
       />
     </Tabs>

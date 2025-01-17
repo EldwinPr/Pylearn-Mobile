@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from
 import { Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
-import NavHeader from '../../components/NavHeader';
+import NavHeader from '../../../components/NavHeader';
 
 const { width } = Dimensions.get('window');
 

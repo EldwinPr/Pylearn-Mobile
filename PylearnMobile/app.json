@@ -21,7 +21,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.eldwinprdt.PylearnMobile"
+      "package": "com.eldwinprdt.pylearn",
+      "permissions": ["INTERNET"]
     },
     "web": {
       "bundler": "metro",
