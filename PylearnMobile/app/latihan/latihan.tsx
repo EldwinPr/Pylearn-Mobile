@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NavHeader from '../../../components/NavHeader';
+import NavHeader from '../../components/NavHeader';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 export default function LatihanScreen() {
