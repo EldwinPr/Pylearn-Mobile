@@ -1,19 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import Navbar from '../navbar';
-import Footer from '../footer';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import config from '../config';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Text, TextInput, Button, Card, ProgressBar, IconButton } from 'react-native-paper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { config } from 'src/config/api';
+import NavHeader from '../../../components/NavHeader';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 interface Question {
   question: string;
@@ -55,211 +46,358 @@ const questions: Question[] = [
   }
 ];
 
-const FillInTheBlanks: React.FC = () => {
+export default function FillScreen() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answer, setAnswer] = useState('');
   const [score, setScore] = useState(0);
-  const [userAnswer, setUserAnswer] = useState('');
   const [showResult, setShowResult] = useState(false);
-  const [isQuizComplete, setIsQuizComplete] = useState(false);
-  const router = useRouter();
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-  }, [currentQuestion]);
+  const getAuthHeaders = async () => {
+    const token = await AsyncStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
 
-  const checkAnswer = () => {
-    const correctAnswer = questions[currentQuestion].answer;
-    if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
-      setScore(prevScore => prevScore + 20);
-      Alert.alert('Correct!', '+20 points');
-    } else {
-      Alert.alert('Incorrect', `The correct answer is "${correctAnswer}".`);
+  const updateProgress = async (finalScore: number) => {
+    try {
+      setIsLoading(true);
+      const headers = await getAuthHeaders();
+      const userEmail = await AsyncStorage.getItem('userEmail');
+      
+      if (!userEmail) throw new Error('User not authenticated');
+
+      const response = await fetch(`${config.API_URL}/progress/update`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          user_email: userEmail,
+          score: finalScore,
+          fill: true
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update progress');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
     }
-    setShowResult(true);
+  };
+
+  const checkAnswer = async () => {
+    if (!answer.trim()) {
+      setError('Please enter an answer');
+      return;
+    }
+
+    const correct = answer.toLowerCase() === questions[currentQuestion].answer.toLowerCase();
+    setIsCorrect(correct);
+    
+    if (correct) {
+      setScore(prevScore => prevScore + 20);
+    }
+
+    if (currentQuestion === questions.length - 1) {
+      const finalScore = correct ? score + 20 : score;
+      try {
+        await updateProgress(finalScore);
+      } catch (error) {
+        console.error('Error updating progress:', error);
+      }
+      setShowResult(true);
+    }
+    setProgress((currentQuestion + 1) / questions.length);
   };
 
   const nextQuestion = () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(prevQuestion => prevQuestion + 1);
-      setUserAnswer('');
-      setShowResult(false);
-    } else {
-      showFinalResult();
+      setCurrentQuestion(prev => prev + 1);
+      setAnswer('');
+      setIsCorrect(null);
+      setError(null);
     }
-  };
-
-  const showFinalResult = async () => {
-    setIsQuizComplete(true);
-    // await updateProgress('fill', score);
   };
 
   const restartQuiz = () => {
     setCurrentQuestion(0);
     setScore(0);
-    setUserAnswer('');
+    setAnswer('');
     setShowResult(false);
-    setIsQuizComplete(false);
+    setIsCorrect(null);
+    setProgress(0);
+    setError(null);
   };
 
-  // const updateProgress = async (exerciseType: string, newScore: number) => {
-  //   try {
-  //     const userEmail = await AsyncStorage.getItem('userEmail');
-  //     if (!userEmail) return;
-
-  //     const response = await fetch(`${config.API_URL}/progress?email=${encodeURIComponent(userEmail)}`);
-  //     const currentProgress = await response.json();
-
-  //     const updateData = {
-  //       user_email: userEmail,
-  //       score: newScore,
-  //       [exerciseType]: true
-  //     };
-
-  //     if (currentProgress && currentProgress.score >= newScore) {
-  //       return;
-  //     }
-
-  //     const updateResponse = await fetch(`${config.API_URL}/progress/update`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify(updateData)
-  //     });
-
-  //     if (!updateResponse.ok) {
-  //       throw new Error('Failed to update progress');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error updating progress:', error);
-  //   }
-  // };
-
-  const renderQuestion = () => {
-    const question = questions[currentQuestion];
+  if (showResult) {
     return (
-      <View>
-        <Text style={styles.questionText}>{question.question}</Text>
-        <View style={styles.blankContainer}>
-          {question.blank.split('[blank]').map((part, index, array) => (
-            <React.Fragment key={index}>
-              <Text>{part}</Text>
-              {index < array.length - 1 && (
-                <TextInput
-                  style={[styles.input, { width: question.size * 12 }]}
-                  value={userAnswer}
-                  onChangeText={setUserAnswer}
-                  maxLength={question.size + 5}
-                />
-              )}
-            </React.Fragment>
-          ))}
-        </View>
-      </View>
+      <ScrollView style={styles.container}>
+        <NavHeader />
+        <Card style={styles.contentSection}>
+          <Card.Content>
+            <View style={styles.resultContainer}>
+              <Text style={styles.title}>Quiz Complete!</Text>
+              <FontAwesome5 name="trophy" size={64} color="#FFD700" style={styles.icon} />
+              <Text style={styles.scoreText}>Your final score: {score} out of 100 points</Text>
+              <Text style={styles.scoreSubtext}>({score/20} correct answers out of 5 questions)</Text>
+              <Button
+                mode="contained"
+                onPress={restartQuiz}
+                style={styles.submitButton}
+                labelStyle={{ color: '#ffff' }}
+                disabled={isLoading}
+              >
+                Try Again
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+      </ScrollView>
     );
-  };
+  }
 
   return (
-    <View style={styles.container}>
-      <Navbar />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Fill in the Blanks - Python Syntax</Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progress, { width: `${((currentQuestion + 1) / questions.length) * 100}%` }]} />
-        </View>
-        {!isQuizComplete ? (
-          <>
-            {renderQuestion()}
-            {!showResult ? (
-              <TouchableOpacity style={styles.button} onPress={checkAnswer}>
-                <Text style={styles.buttonText}>Submit Answer</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.button} onPress={nextQuestion}>
-                <Text style={styles.buttonText}>Next Question</Text>
-              </TouchableOpacity>
-            )}
-          </>
-        ) : (
-          <View style={styles.finalResult}>
-            <Text style={styles.finalScoreText}>Quiz Complete!</Text>
-            <Text style={styles.scoreBreakdown}>Your final score: {score} out of 100 points</Text>
-            <Text style={styles.scoreBreakdown}>({score/20} correct answers out of 5 questions)</Text>
-            <TouchableOpacity style={styles.button} onPress={restartQuiz}>
-              <Text style={styles.buttonText}>Try Again</Text>
-            </TouchableOpacity>
+    <ScrollView style={styles.container}>
+      <NavHeader />
+      <Card style={styles.contentSection}>
+        <Card.Content style={styles.cardContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Fill in the Blanks</Text>
+            <Text style={styles.subtitle}>Complete the Python syntax:</Text>
+            <ProgressBar 
+              progress={progress} 
+              color="#4A90E2" 
+              style={styles.progressBar} 
+            />
           </View>
-        )}
-      </ScrollView>
-      <Footer />
-    </View>
+          
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <View style={styles.questionContainer}>
+            <Text style={styles.questionText}>{questions[currentQuestion].question}</Text>
+            <View style={styles.codeContainer}>
+              <Text style={styles.codeText}>
+                {questions[currentQuestion].blank.split('[blank]')[0]}
+              </Text>
+              <TextInput
+                value={answer}
+                onChangeText={text => {
+                  setAnswer(text);
+                  setError(null);
+                }}
+                style={[
+                  styles.input,
+                  { width: questions[currentQuestion].size * 12 }
+                ]}
+                mode="outlined"
+                disabled={isCorrect !== null || isLoading}
+                theme={{ colors: { primary: 'black'} }}
+              />
+              <Text style={styles.codeText}>
+                {questions[currentQuestion].blank.split('[blank]')[1]}
+              </Text>
+            </View>
+          </View>
+
+          {isCorrect !== null && (
+            <View style={[
+              styles.feedbackContainer,
+              isCorrect ? styles.correct : styles.incorrect
+            ]}>
+              <IconButton
+                icon={isCorrect ? "check-circle" : "close-circle"}
+                size={24}
+                iconColor={isCorrect ? "#4CAF50" : "#F44336"}
+              />
+              <Text style={[
+                styles.feedbackText,
+                { color: isCorrect ? "#2E7D32" : "#C62828" }
+              ]}>
+                {isCorrect ? 'Correct! +20 points' : `Incorrect. The correct answer is "${questions[currentQuestion].answer}".`}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="contained"
+              onPress={isCorrect !== null ? nextQuestion : checkAnswer}
+              style={styles.submitButton}
+              labelStyle={{ color: '#ffff' }}
+              loading={isLoading}
+              disabled={isLoading}
+            >
+              {isCorrect !== null ? 'Next Question' : 'Submit'}
+            </Button>
+            {isCorrect === null && (
+              <Button
+                mode="outlined"
+                onPress={() => setAnswer('')}
+                style={styles.resetButton}
+                labelStyle={{ color: 'black' }}
+                disabled={!answer || isLoading}
+              >
+                Clear
+              </Button>
+            )}
+          </View>
+        </Card.Content>
+      </Card>
+    </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f0f2f5',
   },
-  content: {
+  cardContent: {
+    padding: 16,
+  },
+  contentSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    margin: 16,
     padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: 800,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#3670a1',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
     marginBottom: 20,
     textAlign: 'center',
   },
-  progressBar: {
-    height: 10,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 5,
-    marginBottom: 20,
+  header: {
+    marginBottom: 24,
   },
-  progress: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
-    borderRadius: 5,
+  progressBar: {
+    marginTop: 12,
+    height: 6,
+    borderRadius: 3,
+  },
+  questionContainer: {
+    marginBottom: 24,
   },
   questionText: {
     fontSize: 18,
-    marginBottom: 10,
+    lineHeight: 28,
+    color: '#333',
+    marginBottom: 16,
   },
-  blankContainer: {
+  codeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    marginBottom: 20,
+    gap: 8,
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 8,
+  },
+  codeText: {
+    fontFamily: 'monospace',
+    fontSize: 16,
+    color: '#333',
   },
   input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    paddingHorizontal: 10,
+    backgroundColor: 'white',
     minWidth: 60,
+    borderRadius: 4,
   },
-  button: {
-    backgroundColor: '#4CAF50',
-    padding: 10,
-    borderRadius: 5,
+  feedbackContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 20,
+    padding: 16,
+    borderRadius: 8,
   },
-  buttonText: {
-    color: 'white',
+  feedbackText: {
     fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+    marginLeft: 8,
   },
-  finalResult: {
+  correct: {
+    backgroundColor: '#E8F5E9',
+  },
+  incorrect: {
+    backgroundColor: '#FFEBEE',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 20,
+  },
+  submitButton: {
+    backgroundColor: '#3670a1',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  resetButton: {
+    flex: 1,
+    maxWidth: 100,
+    borderRadius: 8,
+    backgroundColor: '#ffc107',
+  },
+  resultContainer: {
     alignItems: 'center',
+    padding: 24,
   },
-  finalScoreText: {
+  icon: {
+    marginVertical: 24,
+  },
+  scoreText: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#1a1a1a',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  scoreBreakdown: {
+  scoreSubtext: {
     fontSize: 18,
-    marginBottom: 5,
+    color: '#666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    backgroundColor: '#FFEBEE',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#C62828',
+    textAlign: 'center',
+    fontSize: 16,
   },
 });
-
-export default FillInTheBlanks;
-

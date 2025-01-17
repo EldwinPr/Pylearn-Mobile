@@ -1,158 +1,142 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+ const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+ const [isLoading, setIsLoading] = useState<boolean>(false);
+ const scrollViewRef = useRef<ScrollView>(null);
 
-  const checkLoginStatus = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      setIsLoggedIn(!!token);
-    } catch (error) {
-      console.error('Error checking login status:', error);
-      setIsLoggedIn(false);
-    }
-  };
+ const checkLoginStatus = async () => {
+   const token = await AsyncStorage.getItem('token');
+   setIsLoggedIn(!!token);
+ };
 
-  useEffect(() => {
-    checkLoginStatus();
-  }, []);
+ useEffect(() => {
+   checkLoginStatus();
+ }, []);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      checkLoginStatus();
-    }, [])
-  );
+ useFocusEffect(
+   React.useCallback(() => {
+     checkLoginStatus();
+   }, [])
+ );
 
-  const handleLogin = () => {
-    router.push('/auth/login');
-  };
+ const handleLogin = () => router.push('/auth/login');
 
-  const handleLogout = async () => {
-    try {
-      setIsLoading(true);
-      const token = await AsyncStorage.getItem('token');
+ const handleLogout = async () => {
+   try {
+     setIsLoading(true);
+     const token = await AsyncStorage.getItem('token');
+     if (token) {
+       await fetch(`${config.API_URL}/logout`, {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${token}`,
+           'Content-Type': 'application/json',
+         },
+       });
+     }
+     await AsyncStorage.multiRemove(['token', 'userEmail']);
+     setIsLoggedIn(false);
+     router.replace('/');
+   } catch (error) {
+     console.error('Logout error:', error);
+   } finally {
+     setIsLoading(false);
+   }
+ };
 
-      if (token) {
-        try {
-          await fetch(`${config.API_URL}/logout`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-        } catch (error) {
-          console.error('API logout error:', error);
-        }
-      }
+ const handleStartLearning = () => {
+   scrollViewRef.current?.scrollTo({ y: height, animated: true });
+ };
 
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('userEmail');
-      setIsLoggedIn(false);
-      router.replace('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+ const handleCardPress = (section: string) => {
+      type RouteType = '/materi' | '../latihan/latihan' | '/onlinecomp';
 
-  const handleCardPress = (section: string) => {
-    switch (section) {
-      case 'Materi':
-        // router.push('/materi');
-        break;
-      case 'Latihan':
-        router.push('(tabs)/Latihan/latihan');
-        break;
-      case 'Online Compiler':
-        router.push('(tabs)/onlinecomp');
-        break;
-    }
-  };
+      const routes: Record<string, RouteType> = {
+        'Materi': '/materi',
+        'Latihan': '../latihan/latihan', 
+        'Online Compiler': '/onlinecomp'
+      };
+      
+      router.push(routes[section]);
+ };
 
-  const handleStartLearning = () => {
-    // router.push('/materi');
-  };
+ return (
+   <ScrollView ref={scrollViewRef} style={styles.container}>
+     <View style={{ height: height }}>
+       <LinearGradient
+         colors={['#1e1e1e', '#3670a1']}
+         style={styles.gradientSection}
+       >
+         <TouchableOpacity 
+           style={[styles.loginBtn, isLoggedIn && styles.logoutBtn]} 
+           onPress={isLoggedIn ? handleLogout : handleLogin}
+           disabled={isLoading}
+         >
+           <Text style={[styles.loginBtnText, isLoggedIn && styles.logoutBtnText]}>
+             {isLoading ? 'Loading...' : isLoggedIn ? 'Logout' : 'Login'}
+           </Text>
+         </TouchableOpacity>
+         
+         <View style={styles.header}>
+           <Image
+             source={{ uri: 'https://cdn.iconscout.com/icon/free/png-256/free-python-logo-icon-download-in-svg-png-gif-file-formats--technology-social-media-vol-5-pack-logos-icons-2945099.png?f=webp&w=256' }}
+             style={styles.titleImage}
+           />
+           <View style={styles.headerText}>
+             <Text style={styles.title}>
+               <Text style={styles.yellowText}>Py</Text>learn
+             </Text>
+             <Text style={styles.subtitle}>
+               Belajar Python dengan cara yang interaktif dan menyenangkan
+             </Text>
+             <TouchableOpacity style={styles.startBtn} onPress={handleStartLearning}>
+               <Text style={styles.startBtnText}>Mulai Belajar</Text>
+             </TouchableOpacity>
+           </View>
+         </View>
+       </LinearGradient>
+     </View>
 
-  return (
-    <ScrollView style={styles.container}>
-      <LinearGradient
-        colors={['#1e1e1e', '#3670a1']}
-        style={styles.gradientSection}
-      >
-        <TouchableOpacity 
-          style={[styles.loginBtn, isLoggedIn && styles.logoutBtn]} 
-          onPress={isLoggedIn ? handleLogout : handleLogin}
-          disabled={isLoading}
-        >
-          <Text style={[styles.loginBtnText, isLoggedIn && styles.logoutBtnText]}>
-            {isLoading ? 'Loading...' : isLoggedIn ? 'Logout' : 'Login'}
-          </Text>
-        </TouchableOpacity>
-        <View style={styles.header}>
-          <Image
-            source={{ uri: 'https://cdn.iconscout.com/icon/free/png-256/free-python-logo-icon-download-in-svg-png-gif-file-formats--technology-social-media-vol-5-pack-logos-icons-2945099.png?f=webp&w=256' }}
-            style={styles.titleImage}
-          />
-          <View style={styles.headerText}>
-            <Text style={styles.title}>
-              <Text style={styles.yellowText}>Py</Text>learn
-            </Text>
-            <Text style={styles.subtitle}>
-              Belajar Python dengan cara yang interaktif dan menyenangkan
-            </Text>
-            <TouchableOpacity style={styles.startBtn} onPress={handleStartLearning}>
-              <Text style={styles.startBtnText}>Mulai Belajar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </LinearGradient>
+     <View style={styles.yellowSection}>
+       <View style={styles.content}>
+         {['Materi', 'Latihan', 'Online Compiler'].map((item, index) => (
+           <TouchableOpacity
+             key={index}
+             style={styles.card}
+             onPress={() => handleCardPress(item)}
+           >
+             <Ionicons 
+               name={index === 0 ? 'book' : index === 1 ? 'code-working' : 'terminal'} 
+               size={80} 
+               color="#3670a1" 
+             />
+             <Text style={styles.cardTitle}>{item}</Text>
+             <Text style={styles.cardDescription}>
+               {index === 0 && 'Pelajari dasar-dasar Python hingga konsep lanjutan dengan materi yang terstruktur.'}
+               {index === 1 && 'Uji pemahaman Anda dengan latihan interaktif dan proyek-proyek menarik.'}
+               {index === 2 && 'Tulis dan jalankan kode Python Anda secara langsung di browser.'}
+             </Text>
+           </TouchableOpacity>
+         ))}
+       </View>
+     </View>
 
-      <View style={styles.yellowSection}>
-        <View style={styles.content}>
-          {['Materi', 'Latihan', 'Online Compiler'].map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.card}
-              onPress={() => handleCardPress(item)}
-            >
-              <Ionicons 
-                name={
-                  index === 0 ? 'book' : 
-                  index === 1 ? 'code-working' : 
-                  'terminal'
-                } 
-                size={80} 
-                color="#3670a1" 
-              />
-              <Text style={styles.cardTitle}>{item}</Text>
-              <Text style={styles.cardDescription}>
-                {index === 0 && 'Pelajari dasar-dasar Python hingga konsep lanjutan dengan materi yang terstruktur.'}
-                {index === 1 && 'Uji pemahaman Anda dengan latihan interaktif dan proyek-proyek menarik.'}
-                {index === 2 && 'Tulis dan jalankan kode Python Anda secara langsung di browser.'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          © 2024 Pylearn | Belajar Python dengan mudah dan menyenangkan
-        </Text>
-      </View>
-    </ScrollView>
-  );
+     <View style={styles.footer}>
+       <Text style={styles.footerText}>
+         © 2024 Pylearn | Belajar Python dengan mudah dan menyenangkan
+       </Text>
+     </View>
+   </ScrollView>
+ );
 }
 
 
@@ -162,7 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f4',
   },
   gradientSection: {
-    minHeight: 600,
+    height: height,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,

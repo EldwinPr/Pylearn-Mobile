@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
-import { Link, router } from 'expo-router';
+import { TextInput, Button, Text, Card } from 'react-native-paper';
+import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
 
@@ -17,15 +17,13 @@ interface AuthResponse {
 }
 
 export default function LoginScreen() {
-  const [form, setForm] = useState<LoginForm>({
-    email: '',
-    password: '',
-  });
+  const [form, setForm] = useState<LoginForm>({ email: '', password: '' });
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleLogin = async () => {
-    if (!form.email.includes('@') || form.email.length < 5) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
       setError('Please enter a valid email address.');
       return;
     }
@@ -41,9 +39,7 @@ export default function LoginScreen() {
     try {
       const response = await fetch(`${config.API_URL}/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
 
@@ -62,6 +58,24 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  const testStorage = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        console.log('Token retrieved:', token);
+      } else {
+        console.log('No token found');
+      }
+    } catch (error) {
+      console.log('Error retrieving token', error);
+    }
+  };
+
+  // Run testStorage to verify token retrieval
+  React.useEffect(() => {
+    testStorage();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -84,6 +98,9 @@ export default function LoginScreen() {
           style={styles.input}
           keyboardType="email-address"
           autoCapitalize="none"
+          theme={{ colors: { text: 'black', placeholder: 'black', primary: '#3670a1', onSurfaceVariant: 'black' } }}
+          outlineColor="black"
+          activeOutlineColor="#3670a1"
         />
 
         <TextInput
@@ -93,14 +110,24 @@ export default function LoginScreen() {
           mode="outlined"
           style={styles.input}
           secureTextEntry
+          theme={{ colors: { text: 'black', placeholder: 'black', primary: '#3670a1', onSurfaceVariant: 'black' } }}
+          outlineColor="black"
+          activeOutlineColor="#3670a1"
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <Card style={styles.errorCard}>
+            <Card.Content>
+              <Text style={styles.error}>{error}</Text>
+            </Card.Content>
+          </Card>
+        ) : null}
 
         <Button
           mode="contained"
           onPress={handleLogin}
-          style={styles.button}
+          style={[styles.button, { backgroundColor: '#3670a1' }]}
+          labelStyle={{ color: 'white' }}
           loading={loading}
           disabled={loading}
         >
@@ -108,16 +135,22 @@ export default function LoginScreen() {
         </Button>
 
         <Button
-          mode="outlined"
+          mode="contained"
           onPress={() => router.push('/auth/register')}
-          style={styles.button}
+          style={[styles.button, { backgroundColor: '#ffc107' }]}
+          labelStyle={{ color: 'black' }}
         >
           Register
         </Button>
 
-        <Link href="/" style={styles.backLink}>
-          <Text>Back to Home</Text>
-        </Link>
+        <Button
+          mode="text"
+          onPress={() => router.push('/')}
+          style={styles.backLink}
+          labelStyle={{ color: '#3670a1' }}
+        >
+          Back to Home
+        </Button>
       </View>
     </View>
   );
@@ -126,7 +159,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#2c3e50',
     padding: 20,
   },
   content: {
@@ -163,12 +196,18 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     paddingVertical: 8,
-    backgroundColor: '#ffc107',
   },
   error: {
     color: 'red',
     textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  errorCard: {
     marginBottom: 16,
+    backgroundColor: '#FFEBEE',
+  },
+  forgotPassword: {
+    marginTop: 8,
   },
   backLink: {
     marginTop: 16,

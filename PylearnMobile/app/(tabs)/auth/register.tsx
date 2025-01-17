@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { TextInput, Button, Text, Card } from 'react-native-paper';
 import { router } from 'expo-router';
 import { config } from 'src/config/api';
 
@@ -27,14 +27,20 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleRegister = async () => {
-    // Form validation
     if (form.username.length < 3) {
       setError('Username must be at least 3 characters long.');
       return;
     }
 
-    if (!form.email.includes('@') || form.email.length < 5) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
       setError('Please enter a valid email address.');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+    if (!passwordRegex.test(form.password)) {
+      setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.');
       return;
     }
 
@@ -67,7 +73,6 @@ export default function RegisterScreen() {
       const data: RegisterResponse = await response.json();
 
       if (response.ok) {
-        // Redirect to login page on successful registration
         router.replace('/auth/login');
       } else {
         setError(data.message || 'Registration failed. Please try again.');
@@ -99,6 +104,16 @@ export default function RegisterScreen() {
           mode="outlined"
           style={styles.input}
           autoCapitalize="none"
+          theme={{ 
+            colors: { 
+              text: 'black',
+              placeholder: 'black',
+              primary: '#3670a1',
+              onSurfaceVariant: 'black',
+            } 
+          }}
+          outlineColor="black"
+          activeOutlineColor="#3670a1"
         />
 
         <TextInput
@@ -109,6 +124,16 @@ export default function RegisterScreen() {
           style={styles.input}
           keyboardType="email-address"
           autoCapitalize="none"
+          theme={{ 
+            colors: { 
+              text: 'black',
+              placeholder: 'black',
+              primary: '#3670a1',
+              onSurfaceVariant: 'black',
+            } 
+          }}
+          outlineColor="black"
+          activeOutlineColor="#3670a1"
         />
 
         <TextInput
@@ -118,6 +143,16 @@ export default function RegisterScreen() {
           mode="outlined"
           style={styles.input}
           secureTextEntry
+          theme={{ 
+            colors: { 
+              text: 'black',
+              placeholder: 'black',
+              primary: '#3670a1',
+              onSurfaceVariant: 'black',
+            } 
+          }}
+          outlineColor="black"
+          activeOutlineColor="#3670a1"
         />
 
         <TextInput
@@ -127,14 +162,31 @@ export default function RegisterScreen() {
           mode="outlined"
           style={styles.input}
           secureTextEntry
+          theme={{ 
+            colors: { 
+              text: 'black',
+              placeholder: 'black',
+              primary: '#3670a1',
+              onSurfaceVariant: 'black',
+            } 
+          }}
+          outlineColor="black"
+          activeOutlineColor="#3670a1"
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <Card style={styles.errorCard}>
+            <Card.Content>
+              <Text style={styles.error}>{error}</Text>
+            </Card.Content>
+          </Card>
+        ) : null}
 
         <Button
           mode="contained"
           onPress={handleRegister}
-          style={styles.button}
+          style={[styles.button, { backgroundColor: '#3670a1' }]}
+          labelStyle={{ color: 'white' }}
           loading={loading}
           disabled={loading}
         >
@@ -142,9 +194,10 @@ export default function RegisterScreen() {
         </Button>
 
         <Button
-          mode="outlined"
+          mode="contained"
           onPress={() => router.push('/auth/login')}
-          style={styles.button}
+          style={[styles.button, { backgroundColor: '#ffc107' }]}
+          labelStyle={{ color: 'black' }}
         >
           Back to Login
         </Button>
@@ -152,7 +205,8 @@ export default function RegisterScreen() {
         <Button
           mode="text"
           onPress={() => router.push('/')}
-          style={styles.button}
+          style={styles.backLink}
+          labelStyle={{ color: '#3670a1' }}
         >
           Back to Home
         </Button>
@@ -164,7 +218,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#2c3e50',
     padding: 20,
   },
   content: {
@@ -201,11 +255,19 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     paddingVertical: 8,
-    backgroundColor: '#ffc107',
   },
   error: {
     color: 'red',
     textAlign: 'center',
+    fontWeight: 'bold',
     marginBottom: 16,
+  },
+  errorCard: {
+    marginBottom: 16,
+    backgroundColor: '#FFEBEE',
+  },
+  backLink: {
+    marginTop: 16,
+    alignSelf: 'center',
   },
 });

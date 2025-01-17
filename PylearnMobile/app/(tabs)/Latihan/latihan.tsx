@@ -1,134 +1,144 @@
-import React, { useState } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import Navbar from '../navbar';
-import Footer from '../footer';
-import { useRouter } from 'expo-router';
-
-const { width } = Dimensions.get('window');
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NavHeader from '../../../components/NavHeader';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 export default function LatihanScreen() {
-  const router = useRouter();
-  const [pressedButton, setPressedButton] = useState<string | null>(null);
+  const { width } = useWindowDimensions();
 
-  const handleNavigate = (page: string) => {
-    router.push(`/(tabs)/Latihan/${page}`);
+  const handleExercisePress = (route: string) => {
+    router.push(route as any);
   };
 
+  const exercises = [
+    {
+      title: 'Fill in The Blanks',
+      icon: 'pencil-alt',
+      route: '/latihan/fill',
+      description: 'Latihan mengisi bagian yang kosong',
+      color: '#4CAF50'
+    },
+    {
+      title: 'Drag and Drop',
+      icon: 'arrows-alt',
+      route: '/latihan/drag',
+      description: 'Latihan menyusun kode',
+      color: '#2196F3'
+    },
+    {
+      title: 'Multiple Choice',
+      icon: 'list',
+      route: '/latihan/multiplechoice',
+      description: 'Latihan pilihan ganda',
+      color: '#9C27B0'
+    },
+    {
+      title: 'Skor',
+      icon: 'star',
+      route: '/latihan/score',
+      description: 'Lihat pencapaianmu',
+      color: '#FF9800'
+    }
+  ];
+
   return (
-    <View style={styles.container}>
-      <Navbar />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
+    <ScrollView style={styles.container}>
+      <NavHeader />
+      <View style={styles.content}>
+        <View style={styles.card}>
           <Text style={styles.title}>Pilih Jenis Latihan</Text>
           <Text style={styles.subtitle}>
-            Silakan pilih jenis latihan yang ingin kamu kerjakan.
+            Silakan pilih jenis latihan yang ingin kamu kerjakan
           </Text>
+
           <View style={styles.exerciseGrid}>
-            {[{
-              icon: 'pencil',
-              title: 'Fill in The Blanks',
-              page: 'fill',
-            }, {
-              icon: 'move',
-              title: 'Drag and Drop',
-              page: 'drag',
-            }, {
-              icon: 'list',
-              title: 'Multiple Choice',
-              page: 'multiple-choice',
-            }/*, {
-              icon: 'star',
-              title: 'Skor',
-              page: 'score',
-            }*/].map((exercise, index) => (
+            {exercises.map((exercise, index) => (
               <TouchableOpacity
                 key={index}
-                style={[
-                  styles.exerciseButton,
-                  pressedButton === exercise.page && styles.pressedButton,
-                ]}
-                onPressIn={() => setPressedButton(exercise.page)}
-                onPressOut={() => setPressedButton(null)}
-                onPress={() => handleNavigate(exercise.page)}
+                style={[styles.exerciseButton, { backgroundColor: exercise.color }]}
+                onPress={() => handleExercisePress(exercise.route)}
               >
-                <Ionicons
+                <FontAwesome5 
                   name={exercise.icon}
-                  size={50}
-                  color={pressedButton === exercise.page ? '#333' : '#ffffff'}
+                  size={32}
+                  color="white"
+                  style={styles.icon}
                 />
-                <Text
-                  style={[
-                    styles.buttonText,
-                    pressedButton === exercise.page && styles.pressedButtonText,
-                  ]}
-                >
-                  {exercise.title}
-                </Text>
+                <Text style={styles.buttonText}>{exercise.title}</Text>
+                <Text style={styles.buttonDescription}>{exercise.description}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
-      </ScrollView>
-      <Footer />
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
-  },
-  scrollContent: {
-    flexGrow: 1,
+    backgroundColor: '#f0f2f5',
   },
   content: {
     padding: 20,
+    alignItems: 'center',
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 1000,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#3670a1',
+    marginBottom: 8,
     textAlign: 'center',
-    marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
+    color: '#666',
     marginBottom: 20,
+    textAlign: 'center',
   },
   exerciseGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    gap: 20,
+    justifyContent: 'center',
   },
   exerciseButton: {
-    backgroundColor: '#3670a1',
-    padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
+    padding: 24,
+    width: 280,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    width: width > 600 ? 180 : width * 0.4,
+    minHeight: 180,
   },
-  pressedButton: {
-    backgroundColor: '#ffc107',
+  icon: {
+    marginBottom: 16,
   },
   buttonText: {
-    marginTop: 10,
-    color: '#ffffff',
-    fontSize: 16,
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
     textAlign: 'center',
   },
-  pressedButtonText: {
-    color: '#333',
-  },
+  buttonDescription: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 20,
+  }
 });

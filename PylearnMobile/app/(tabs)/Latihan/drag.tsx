@@ -1,257 +1,337 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  PanResponder,
-  Animated,
-  Dimensions,
-} from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import Navbar from '../navbar';
-import Footer from '../footer';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import { Button } from 'react-native-paper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { config } from 'src/config/api';
+import NavHeader from '../../../components/NavHeader';
 
 const { width } = Dimensions.get('window');
 
-export default function DragAndDrop() {
-  const [dropzones, setDropzones] = useState<{ [key: string]: string | null }>({
-    dropzone1: null,
-    dropzone2: null,
-  });
-  const [positions, setPositions] = useState({
-    draggable1: new Animated.ValueXY(),
-    draggable2: new Animated.ValueXY(),
-    draggable3: new Animated.ValueXY(),
-  });
+interface DropSlot {
+  id: string;
+  content: string | null;
+  isCorrect?: boolean;
+}
 
-  const resetDraggable = (key: string) => {
-    setDropzones((prev) => {
-      const newState = { ...prev };
-      Object.keys(prev).forEach((zoneKey) => {
-        if (prev[zoneKey] === key) {
-          newState[zoneKey] = null;
-        }
-      });
-      return newState;
-    });
-    positions[key].setValue({ x: 0, y: 0 });
+interface DragItem {
+  id: string;
+  text: string;
+}
+
+export default function DragScreen() {
+  const [dropSlots, setDropSlots] = useState<DropSlot[]>([
+    { id: 'slot1', content: null },
+    { id: 'slot2', content: null }
+  ]);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dragItems: DragItem[] = [
+    { id: '1', text: 'print' },
+    { id: '2', text: '("Hello World")' },
+    { id: '3', text: 'System.out.println' }
+  ];
+
+  const correctAnswers = ['print', '("Hello World")'];
+
+  const getAuthHeaders = async () => {
+    const token = await AsyncStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
   };
 
-  const checkAnswers = () => {
-    const correctAnswers = {
-      dropzone1: 'draggable1',
-      dropzone2: 'draggable2',
-    };
+  const handleItemPress = (itemText: string) => {
+    if (isLoading) return;
+    setSelectedItem(selectedItem === itemText ? null : itemText);
+  };
 
-    const isCorrect = Object.entries(correctAnswers).every(
-      ([zone, correctAnswer]) => dropzones[zone] === correctAnswer
+  const handleSlotPress = (slotId: string) => {
+    if (!selectedItem || isLoading) return;
+
+    setDropSlots(currentSlots =>
+      currentSlots.map(slot => {
+        if (slot.id === slotId) {
+          const index = currentSlots.findIndex(s => s.id === slotId);
+          return {
+            ...slot,
+            content: selectedItem,
+            isCorrect: selectedItem === correctAnswers[index]
+          };
+        }
+        return slot;
+      })
     );
+    setSelectedItem(null);
+  };
 
-    if (isCorrect) {
-      alert('Perfect! You scored 100 points!');
-    } else {
-      alert('Some answers are incorrect. Please try again!');
+  const updateProgress = async (score: number) => {
+    try {
+      setIsLoading(true);
+      const headers = await getAuthHeaders();
+      const userEmail = await AsyncStorage.getItem('userEmail');
+      
+      if (!userEmail) throw new Error('User not authenticated');
+
+      const response = await fetch(`${config.API_URL}/progress/update`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          user_email: userEmail,
+          score,
+          drag: true
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update progress');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      resetAnswers();
-    }, [])
-  );
+  const handleSubmit = async () => {
+    const allFilled = dropSlots.every(slot => slot.content !== null);
+    if (!allFilled) {
+      setError('Please fill all slots before submitting');
+      return;
+    }
 
-  const resetAnswers = () => {
-    setDropzones({ dropzone1: null, dropzone2: null });
-    setPositions({
-      draggable1: new Animated.ValueXY(),
-      draggable2: new Animated.ValueXY(),
-      draggable3: new Animated.ValueXY(),
-    });
+    const correctCount = dropSlots.reduce((count, slot, index) => 
+      slot.content === correctAnswers[index] ? count + 1 : count, 0);
+
+    if (correctCount > 0) {
+      const score = correctCount * 50;
+      try {
+        await updateProgress(score);
+        alert(`Score: ${score} points!`);
+      } catch (error) {
+        console.error('Error updating progress:', error);
+      }
+    }
   };
 
-  const createPanResponder = (key: string) =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (e, gestureState) => {
-        positions[key].setValue({
-          x: gestureState.dx,
-          y: gestureState.dy,
-        });
-      },
-      onPanResponderRelease: (e, gestureState) => {
-        const dropzoneBounds = [
-          { x: 50, y: 300, width: 100, height: 100, key: 'dropzone1' },
-          { x: 200, y: 300, width: 100, height: 100, key: 'dropzone2' },
-        ];
-
-        let dropped = false;
-        dropzoneBounds.forEach((zone) => {
-          if (
-            gestureState.moveX >= zone.x &&
-            gestureState.moveX <= zone.x + zone.width &&
-            gestureState.moveY >= zone.y &&
-            gestureState.moveY <= zone.y + zone.height
-          ) {
-            setDropzones((prev) => ({ ...prev, [zone.key]: key }));
-            positions[key].setValue({ x: 0, y: 0 });
-            dropped = true;
-          }
-        });
-
-        if (!dropped) {
-          positions[key].setValue({ x: 0, y: 0 });
-        }
-      },
-    });
+  const handleReset = () => {
+    setDropSlots(slots => slots.map(slot => ({ 
+      ...slot, 
+      content: null,
+      isCorrect: undefined 
+    })));
+    setSelectedItem(null);
+    setError(null);
+  };
 
   return (
-    <View style={styles.container}>
-      <Navbar />
-      <View style={styles.content}>
+    <ScrollView style={styles.container}>
+      <NavHeader />
+      <View style={styles.contentSection}>
         <Text style={styles.title}>Drag and Drop</Text>
-        <Text style={styles.subtitle}>Output: Hello World</Text>
-        <Text style={styles.subtitle}>Letakkan blok di tempat yang sesuai:</Text>
+        <Text style={styles.subtitle}>Place the blocks in the correct order:</Text>
 
-        {/* Drop Zones */}
-        <View style={styles.dropzoneContainer}>
-          {['dropzone1', 'dropzone2'].map((zone) => (
+        {error && <Text style={styles.errorText}>{error}</Text>}
+
+        <View style={styles.outputDisplay}>
+          <Text style={styles.outputText}>Output: Hello World</Text>
+        </View>
+
+        <View style={styles.dropZoneContainer}>
+          {dropSlots.map((slot) => (
             <TouchableOpacity
-              key={zone}
-              style={[styles.dropzone, dropzones[zone] && styles.filled]}
-              onPress={() => {
-                if (dropzones[zone]) resetDraggable(dropzones[zone]!);
-              }}
+              key={slot.id}
+              style={[
+                styles.dropSlot,
+                slot.content && (slot.isCorrect ? styles.slotCorrect : styles.slotIncorrect),
+                !slot.content && selectedItem && styles.dropSlotActive
+              ]}
+              onPress={() => handleSlotPress(slot.id)}
+              disabled={isLoading}
             >
-              {dropzones[zone] && (
-                <Text style={styles.draggableText}>
-                  {dropzones[zone] === 'draggable1'
-                    ? 'print'
-                    : dropzones[zone] === 'draggable2'
-                    ? '("Hello World")'
-                    : 'System.out.println'}
-                </Text>
-              )}
+              <Text style={[
+                styles.slotText,
+                slot.content && slot.isCorrect && styles.textCorrect,
+                slot.content && !slot.isCorrect && styles.textIncorrect
+              ]}>
+                {slot.content || 'Drop Here'}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Draggable Items */}
-        <View style={styles.draggablesContainer}>
-          {Object.keys(positions).map((key) => {
-            const isDropped = Object.values(dropzones).includes(key);
-            return (
-              <Animated.View
-                key={key}
-                style={[
-                  styles.draggable,
-                  isDropped ? styles.hidden : positions[key].getLayout(),
-                ]}
-                {...createPanResponder(key).panHandlers}
-              >
-                <Text style={styles.draggableText}>
-                  {key === 'draggable1'
-                    ? 'print'
-                    : key === 'draggable2'
-                    ? '("Hello World")'
-                    : 'System.out.println'}
-                </Text>
-              </Animated.View>
-            );
-          })}
+        <View style={styles.itemsContainer}>
+          {dragItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.dragItem,
+                selectedItem === item.text && styles.dragItemSelected
+              ]}
+              onPress={() => handleItemPress(item.text)}
+              disabled={isLoading}
+            >
+              <Text style={styles.dragItemText}>{item.text}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Reset and Submit */}
-        <TouchableOpacity style={styles.resetButton} onPress={resetAnswers}>
-          <Text style={styles.resetButtonText}>Reset</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.submitButton} onPress={checkAnswers}>
-          <Text style={styles.submitButtonText}>Submit</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+        <Button 
+          mode="contained" 
+          onPress={handleSubmit}
+          style={styles.submitButton}
+          labelStyle={{ color: '#ffff' }}
+        >
+          Submit
+        </Button>
+        <Button 
+          mode="outlined" 
+          onPress={handleReset}
+          style={styles.resetButton}
+          labelStyle={{ color: '#000000' }}
+        >
+          Reset
+        </Button>
+        </View>
       </View>
-      <Footer />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
+    backgroundColor: '#f0f2f5',
   },
-  content: {
-    flex: 1,
+  contentSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    margin: 16,
     padding: 20,
-    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: 800,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#3670a1',
+    marginBottom: 8,
     textAlign: 'center',
-    marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#333',
+    color: '#666',
+    marginBottom: 20,
     textAlign: 'center',
-    marginBottom: 20,
   },
-  dropzoneContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
+  errorText: {
+    color: '#f44336',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontSize: 16,
   },
-  dropzone: {
-    width: 100,
-    height: 100,
-    borderWidth: 2,
-    borderColor: '#3670a1',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filled: {
-    backgroundColor: '#ffc107',
-  },
-  draggablesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  draggable: {
-    width: 120,
-    height: 50,
-    backgroundColor: '#3670a1',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  draggableText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  hidden: {
-    display: 'none',
-  },
-  resetButton: {
-    backgroundColor: '#ffc107',
+  outputDisplay: {
+    backgroundColor: '#f8f8f8',
     padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 10,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  resetButtonText: {
-    color: '#333',
-    fontWeight: 'bold',
+  outputText: {
+    fontSize: 16,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  dropZoneContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  dropSlot: {
+    width: width > 600 ? 160 : 140,
+    height: 50,
+    backgroundColor: '#f4f4f4',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  dropSlotActive: {
+    borderColor: '#ffc107',
+    borderStyle: 'dashed',
+  },
+  slotText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  itemsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  dragItem: {
+    backgroundColor: '#3670a1',
+    padding: 12,
+    borderRadius: 8,
+    minWidth: 100,
+  },
+  dragItemSelected: {
+    backgroundColor: '#ffc107',
+    transform: [{ scale: 1.05 }],
+  },
+  dragItemText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 20,
   },
   submitButton: {
     backgroundColor: '#3670a1',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
+    flex: 2,
+    maxWidth: 200,
+    borderRadius: 8,
   },
-  submitButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  resetButton: {
+    flex: 1,
+    maxWidth: 100,
+    borderRadius: 8,
+    backgroundColor: '#ffc107',
+  },
+  slotCorrect: {
+    backgroundColor: '#e8f8e8',
+    borderColor: '#4caf50',
+  },
+  slotIncorrect: {
+    backgroundColor: '#ffe8e8',
+    borderColor: '#f44336',
+  },
+  textCorrect: {
+    color: '#4caf50',
+  },
+  textIncorrect: {
+    color: '#f44336',
   },
 });
