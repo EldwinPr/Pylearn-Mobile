@@ -203,7 +203,7 @@ export default function FillScreen() {
                 ]}
                 mode="outlined"
                 disabled={isCorrect !== null || isLoading}
-                theme={{ colors: { primary: '#00000'} }}
+                theme={{ colors: { primary: 'black'} }}
               />
               <Text style={styles.codeText}>
                 {questions[currentQuestion].blank.split('[blank]')[1]}
@@ -246,7 +246,7 @@ export default function FillScreen() {
                 mode="outlined"
                 onPress={() => setAnswer('')}
                 style={styles.resetButton}
-                labelStyle={{ color: '#000000' }}
+                labelStyle={{ color: 'black' }}
                 disabled={!answer || isLoading}
               >
                 Clear

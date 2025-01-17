@@ -67,6 +67,7 @@ export default function NavHeader() {
     { label: 'Materi', path: '/materi' },
     { label: 'Latihan', path: '/latihan/latihan' },
     { label: 'Online Compiler', path: '/onlinecomp' },
+    { label: 'akun', path: '/account' },
   ];
 
   const handleNavigation = (path: string) => {

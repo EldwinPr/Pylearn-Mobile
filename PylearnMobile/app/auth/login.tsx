@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { TextInput, Button, Text, Card } from 'react-native-paper';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
 
@@ -17,10 +17,7 @@ interface AuthResponse {
 }
 
 export default function LoginScreen() {
-  const [form, setForm] = useState<LoginForm>({
-    email: '',
-    password: '',
-  });
+  const [form, setForm] = useState<LoginForm>({ email: '', password: '' });
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -42,9 +39,7 @@ export default function LoginScreen() {
     try {
       const response = await fetch(`${config.API_URL}/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
 
@@ -63,6 +58,24 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  const testStorage = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        console.log('Token retrieved:', token);
+      } else {
+        console.log('No token found');
+      }
+    } catch (error) {
+      console.log('Error retrieving token', error);
+    }
+  };
+
+  // Run testStorage to verify token retrieval
+  React.useEffect(() => {
+    testStorage();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -85,14 +98,7 @@ export default function LoginScreen() {
           style={styles.input}
           keyboardType="email-address"
           autoCapitalize="none"
-          theme={{ 
-            colors: { 
-              text: 'black',
-              placeholder: 'black',
-              primary: '#3670a1',
-              onSurfaceVariant: 'black',
-            } 
-          }}
+          theme={{ colors: { text: 'black', placeholder: 'black', primary: '#3670a1', onSurfaceVariant: 'black' } }}
           outlineColor="black"
           activeOutlineColor="#3670a1"
         />
@@ -104,14 +110,7 @@ export default function LoginScreen() {
           mode="outlined"
           style={styles.input}
           secureTextEntry
-          theme={{ 
-            colors: { 
-              text: 'black',
-              placeholder: 'black',
-              primary: '#3670a1',
-              onSurfaceVariant: 'black',
-            } 
-          }}
+          theme={{ colors: { text: 'black', placeholder: 'black', primary: '#3670a1', onSurfaceVariant: 'black' } }}
           outlineColor="black"
           activeOutlineColor="#3670a1"
         />
@@ -215,4 +214,3 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 });
-
