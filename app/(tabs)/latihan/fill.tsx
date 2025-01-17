@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, TextInput, Button, Card, ProgressBar, IconButton } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from 'src/config/api';
-import NavHeader from '../../components/NavHeader';
+import NavHeader from '../../../components/NavHeader';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 interface Question {

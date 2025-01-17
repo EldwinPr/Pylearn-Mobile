@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NavHeader from '../../components/NavHeader';
+import NavHeader from '../../../components/NavHeader';
 import { config } from 'src/config/api';
 
 interface Question {
