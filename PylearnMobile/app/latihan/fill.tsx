@@ -203,7 +203,7 @@ export default function FillScreen() {
                 ]}
                 mode="outlined"
                 disabled={isCorrect !== null || isLoading}
-                theme={{ colors: { primary: '#00000'} }}
+                theme={{ colors: { primary: '#000000'} }}
               />
               <Text style={styles.codeText}>
                 {questions[currentQuestion].blank.split('[blank]')[1]}
